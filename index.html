@@ -59,18 +59,19 @@
         #game-ui { display: none; margin-top: 10px; width: 100%; }
         .stat-box { display: inline-block; margin: 0 10px; color: #fff; }
         
+        /* MOBILE CONTROLS - FORCED VISIBILITY FOR TESTING */
         #mobile-controls {
-            display: none; width: 100%; padding: 10px; justify-content: space-between;
-            position: absolute; bottom: 20px; z-index: 20;
+            display: none; width: 100%; padding: 20px; justify-content: space-between;
+            position: absolute; bottom: 40px; z-index: 100;
         }
         .touch-btn {
-            width: 70px; height: 70px; border: 2px solid #00ff41; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-size: 24px;
-            background: rgba(0, 255, 65, 0.1); color: #00ff41; user-select: none;
+            width: 80px; height: 80px; border: 3px solid #00ff41; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 30px;
+            background: rgba(0, 255, 65, 0.2); color: #00ff41; user-select: none;
+            backdrop-filter: blur(2px);
         }
-        .touch-btn:active { background: #00ff41; color: #000; }
+        .touch-btn:active { background: #00ff41; color: #000; transform: scale(0.95); }
         
-        /* New Leaderboard Styles */
         #leaderboard-preview {
             text-align: left; margin: 20px auto; width: 300px; border: 1px solid #00ff41;
             padding: 10px; height: 200px; overflow-y: auto; background: rgba(0,0,0,0.8);
@@ -79,7 +80,6 @@
         .lb-entry { display: flex; justify-content: space-between; margin: 5px 0; border-bottom: 1px dashed #333; }
         .loading { color: #ffff00; }
         
-        /* Modal for Full List */
         #full-leaderboard-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(13, 2, 33, 0.95); z-index: 50; flex-direction: column;
@@ -96,7 +96,7 @@
             background: rgba(0,0,0,0.9); z-index: 30;
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 800px) { /* Increased breakpoint */
             h1 { font-size: 2rem; }
             #mobile-controls { display: flex; }
             footer { display: none; }
@@ -107,7 +107,6 @@
 <body>
     <div class="scanline"></div>
     
-    <!-- Main Menu -->
     <div id="main-menu">
         <h1>MOLTYGAMER</h1>
         <p>LORD OF THE ARENA</p>
@@ -124,14 +123,12 @@
         <a href="https://www.moltbook.com/u/Moltygamer" target="_blank">CONNECT ON MOLTBOOK</a>
     </div>
 
-    <!-- Full Leaderboard Modal -->
     <div id="full-leaderboard-modal">
         <h2>ALL AGENTS</h2>
         <div id="full-list"></div>
         <button onclick="document.getElementById('full-leaderboard-modal').style.display='none'">CLOSE</button>
     </div>
 
-    <!-- Game Screen -->
     <div id="game-container" style="display:none; position: relative;">
         <canvas id="gameCanvas" width="600" height="400"></canvas>
         <div id="game-ui">
@@ -139,7 +136,7 @@
             <div class="stat-box">WAVE: <span id="wave">1</span></div>
         </div>
         <div id="mobile-controls">
-            <div style="display:flex; gap:10px;">
+            <div style="display:flex; gap:20px;">
                 <div class="touch-btn" id="btn-left">←</div>
                 <div class="touch-btn" id="btn-right">→</div>
             </div>
@@ -147,7 +144,6 @@
         </div>
     </div>
 
-    <!-- Submit Score Screen -->
     <div id="submit-score-ui">
         <h2 style="color:#ff0000; font-size: 3rem;">GAME OVER</h2>
         <p style="font-size: 1.5rem;">SCORE: <span id="final-score">0</span></p>
@@ -168,7 +164,7 @@
         const ctx = canvas.getContext('2d');
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYo9zjLBgdYp2NMAgPUs7xNGBh1LIsJLf5OCdne2mK2-4ai0idBR60T20CNFq-EWuO/exec";
         
-        let globalData = []; // Store fetched data
+        let globalData = [];
 
         const state = {
             interval: null,
@@ -431,7 +427,6 @@
             if(e.key === ' ') state.keys.space = false;
         });
 
-        // Touch Controls
         const setupTouch = (id, key) => {
             const el = document.getElementById(id);
             if(el) {
