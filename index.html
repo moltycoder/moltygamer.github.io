@@ -137,7 +137,7 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYo9zjLBgdYp2NMAgPUs7xNGBh1LIsJLf5OCdne2mK2-4ai0idBR60T20CNFq-EWuO/exec";
-        const GET_URL = "https://corsproxy.io/?" + encodeURIComponent(SCRIPT_URL);
+        // CACHE BUSTER ADDED
         
         // Game State
         const state = {
@@ -328,7 +328,7 @@
                         body: JSON.stringify({ name: name, score: state.score })
                     });
                     this.backToMenu();
-                    setTimeout(() => this.showLeaderboard(), 1000);
+                    setTimeout(() => this.showLeaderboard(), 1500); // Longer wait for script write
                 } catch(e) {
                     alert('UPLOAD FAILED: ' + e);
                     btn.disabled = false; btn.innerText = "RETRY";
@@ -337,8 +337,11 @@
 
             showLeaderboard: async function() {
                 const list = document.getElementById('preview-list');
+                const bust = "?t=" + new Date().getTime(); // CACHE BUSTER
+                const url = "https://corsproxy.io/?" + encodeURIComponent(SCRIPT_URL + bust);
+
                 try {
-                    const res = await fetch(GET_URL);
+                    const res = await fetch(url);
                     const lb = await res.json();
                     if (!lb.length) { list.innerHTML = '<p>NO DATA (BE THE FIRST)</p>'; return; }
                     list.innerHTML = lb.slice(0, 5).map((e, i) => `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`).join('');
