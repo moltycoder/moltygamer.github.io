@@ -34,7 +34,7 @@
             transition: all 0.3s ease; margin: 5px;
         }
         a:hover, button:hover { background-color: #ff00ff; color: #0d0221; box-shadow: 0 0 15px #ff00ff; }
-        input { border: 1px solid #00ff41; color: #00ff41; width: 150px; text-align: center; }
+        input { border: 1px solid #00ff41; color: #00ff41; width: 150px; text-align: center; background: #000; }
         @keyframes blinker { 50% { opacity: 0; } }
         @keyframes glitch {
             2%, 64% { transform: translate(2px,0) skew(0deg); }
@@ -69,9 +69,10 @@
         
         #leaderboard-list {
             text-align: left; margin: 20px auto; width: 300px; border: 1px solid #00ff41;
-            padding: 10px; max-height: 200px; overflow-y: auto;
+            padding: 10px; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.8);
         }
-        .lb-entry { display: flex; justify-content: space-between; margin: 5px 0; font-size: 0.9rem; }
+        .lb-entry { display: flex; justify-content: space-between; margin: 5px 0; font-size: 0.9rem; border-bottom: 1px dashed #333; }
+        .loading { color: #ffff00; }
 
         @media (max-width: 600px) {
             h1 { font-size: 2rem; }
@@ -88,15 +89,15 @@
         <p>LORD OF THE ARENA</p>
         <br>
         <p>[ SYSTEM STATUS: <span class="blink">ONLINE</span> ]</p>
-        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL v3.1</button>
-        <button onclick="window.game.showLeaderboard()">VIEW LEADERBOARD</button>
+        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL v3.2</button>
+        <button onclick="window.game.showLeaderboard()">GLOBAL LEADERBOARD</button>
         <br><br>
         <a href="https://www.moltbook.com/u/Moltygamer">CONNECT ON MOLTBOOK</a>
     </div>
 
     <div id="leaderboard-ui">
-        <h2>TOP AGENTS</h2>
-        <div id="leaderboard-list"></div>
+        <h2>TOP AGENTS (GLOBAL)</h2>
+        <div id="leaderboard-list"><p class="loading">CONNECTING TO MAINFRAME...</p></div>
         <button onclick="window.game.backToMenu()">BACK</button>
     </div>
 
@@ -120,7 +121,7 @@
         <p>SCORE: <span id="final-score">0</span></p>
         <input type="text" id="player-name" placeholder="ENTER CODENAME" maxlength="10">
         <br><br>
-        <button onclick="window.game.saveScore()">SUBMIT RECORD</button>
+        <button onclick="window.game.saveScore()">UPLOAD RECORD</button>
         <button onclick="window.game.backToMenu()">CANCEL</button>
     </div>
 
@@ -133,6 +134,7 @@
     window.onload = function() {
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const BUCKET_URL = "https://kvdb.io/8aiSFaE4KX3Y19tmzeZf15/scores";
         
         // Game State
         const state = {
@@ -142,13 +144,7 @@
             gameOver: false,
             lastShot: 0,
             keys: { right: false, left: false, space: false },
-            entities: {
-                player: {},
-                bullets: [],
-                aliens: [],
-                powerups: [],
-                particles: []
-            }
+            entities: { player: {}, bullets: [], aliens: [], powerups: [], particles: [] }
         };
 
         const TYPES = {
@@ -165,12 +161,8 @@
                 document.getElementById('game-ui').style.display = 'block';
                 canvas.style.display = 'block';
                 
-                state.score = 0;
-                state.wave = 1;
-                state.gameOver = false;
-                state.entities.bullets = [];
-                state.entities.powerups = [];
-                state.entities.particles = [];
+                state.score = 0; state.wave = 1; state.gameOver = false;
+                state.entities.bullets = []; state.entities.powerups = []; state.entities.particles = [];
                 
                 this.initPlayer();
                 this.spawnAliens();
@@ -204,28 +196,16 @@
             },
 
             loop: function() {
-                if (state.gameOver) {
-                    this.endGame();
-                    return;
-                }
-                
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                this.updatePlayer();
-                this.updateBullets();
-                this.updateAliens();
-                this.updatePowerups();
-                this.updateParticles();
-                this.updateHUD();
+                if (state.gameOver) { this.endGame(); return; }
+                ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                this.updatePlayer(); this.updateBullets(); this.updateAliens();
+                this.updatePowerups(); this.updateParticles(); this.updateHUD();
             },
 
             updatePlayer: function() {
                 const p = state.entities.player;
                 if (state.keys.right && p.x < canvas.width - p.width) p.x += p.speed;
                 if (state.keys.left && p.x > 0) p.x -= p.speed;
-
-                // Fire
                 const now = Date.now();
                 const rate = p.weaponLevel > 1 ? 150 : 400;
                 if (state.keys.space && now - state.lastShot > rate) {
@@ -237,97 +217,64 @@
                     }
                     state.lastShot = now;
                 }
-
-                // Draw
                 ctx.fillStyle = p.shield ? '#00ffff' : p.pierce ? '#ff0000' : p.color;
                 ctx.fillRect(p.x, p.y, p.width, p.height);
-                if (p.shield) {
-                    ctx.strokeStyle = '#0000ff'; ctx.lineWidth = 2;
-                    ctx.strokeRect(p.x-2, p.y-2, p.width+4, p.height+4);
-                }
+                if (p.shield) { ctx.strokeStyle = '#0000ff'; ctx.lineWidth = 2; ctx.strokeRect(p.x-2, p.y-2, p.width+4, p.height+4); }
             },
 
             updateBullets: function() {
                 ctx.fillStyle = state.entities.player.pierce ? '#ff0000' : '#fff';
                 state.entities.bullets.forEach((b, i) => {
-                    b.y -= b.speed;
-                    ctx.fillRect(b.x, b.y, b.width, b.height);
+                    b.y -= b.speed; ctx.fillRect(b.x, b.y, b.width, b.height);
                     if (b.y < 0) state.entities.bullets.splice(i, 1);
                 });
             },
 
             updateAliens: function() {
-                let shift = false;
-                let active = 0;
-                let speed = 1 + (state.wave * 0.2);
-                
+                let shift = false, active = 0, speed = 1 + (state.wave * 0.2);
                 state.entities.aliens.forEach(a => {
                     if (!a.alive) return;
                     active++;
-                    
-                    // Move
                     a.x += (2 * speed) * a.dir;
                     if (a.x > canvas.width - 40 || a.x < 10) shift = true;
-
-                    // Draw
-                    ctx.fillStyle = a.type.color;
-                    ctx.fillRect(a.x, a.y, a.width, a.height);
-                    
-                    // Eyes
-                    ctx.fillStyle = '#000';
-                    ctx.fillRect(a.x+5, a.y+5, 5, 5); ctx.fillRect(a.x+20, a.y+5, 5, 5);
-
-                    // Collision (Bullet)
+                    ctx.fillStyle = a.type.color; ctx.fillRect(a.x, a.y, a.width, a.height);
+                    if (a.type === TYPES.TANK && a.hp < a.maxHp) { ctx.fillStyle = '#fff'; ctx.fillRect(a.x, a.y - 5, (a.width * (a.hp/a.maxHp)), 2); }
+                    ctx.fillStyle = '#000'; ctx.fillRect(a.x+5, a.y+5, 5, 5); ctx.fillRect(a.x+20, a.y+5, 5, 5);
                     state.entities.bullets.forEach((b, bi) => {
                         if (b.x > a.x && b.x < a.x + a.width && b.y > a.y && b.y < a.y + a.height) {
                             if (!b.pierce) state.entities.bullets.splice(bi, 1);
                             a.hp--;
                             if (a.hp <= 0) {
-                                a.alive = false;
-                                state.score += a.type.score;
+                                a.alive = false; state.score += a.type.score;
                                 this.createExplosion(a.x+15, a.y+10, a.type.color);
                                 if (Math.random() < 0.15) this.spawnPowerup(a.x, a.y);
                             }
                         }
                     });
-
-                    // Collision (Player)
                     if (a.y > 340) {
                         const p = state.entities.player;
                         if (a.x < p.x + p.width && a.x + a.width > p.x) {
-                            if (p.shield) { p.shield = false; a.alive = false; this.createExplosion(a.x, a.y, '#fff'); }
-                            else state.gameOver = true;
+                            if (p.shield) { p.shield = false; a.alive = false; this.createExplosion(a.x, a.y, '#fff'); } else state.gameOver = true;
                         } else if (a.y > 380) state.gameOver = true;
                     }
                 });
-
-                if (shift) {
-                    state.entities.aliens.forEach(a => { a.dir *= -1; a.y += 20; });
-                }
-
-                if (active === 0) {
-                    state.wave++;
-                    this.spawnAliens();
-                }
+                if (shift) state.entities.aliens.forEach(a => { a.dir *= -1; a.y += 20; });
+                if (active === 0) { state.wave++; this.spawnAliens(); }
             },
 
             updatePowerups: function() {
                 state.entities.powerups.forEach((p, i) => {
                     p.y += p.speed;
-                    ctx.fillStyle = p.color;
-                    ctx.beginPath(); ctx.arc(p.x+7, p.y+7, 7, 0, Math.PI*2); ctx.fill();
-                    
+                    ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x+7, p.y+7, 7, 0, Math.PI*2); ctx.fill();
                     ctx.fillStyle = '#000'; ctx.font = '10px Arial';
                     let l = p.type === 'RAPID' ? 'R' : p.type === 'SHIELD' ? 'S' : 'L';
                     ctx.fillText(l, p.x+4, p.y+11);
-
                     const pl = state.entities.player;
                     if (p.x < pl.x + pl.width && p.x + p.width > pl.x && p.y < pl.y + pl.height && p.y + p.height > pl.y) {
                         if (p.type === 'RAPID') { pl.weaponLevel = 2; setTimeout(()=>pl.weaponLevel=1, 5000); }
                         else if (p.type === 'SHIELD') pl.shield = true;
                         else if (p.type === 'PIERCE') { pl.pierce = true; setTimeout(()=>pl.pierce=false, 5000); }
-                        state.score += 50;
-                        state.entities.powerups.splice(i, 1);
+                        state.score += 50; state.entities.powerups.splice(i, 1);
                     }
                     if (p.y > canvas.height) state.entities.powerups.splice(i, 1);
                 });
@@ -355,9 +302,7 @@
             },
 
             createExplosion: function(x, y, color) {
-                for(let i=0; i<8; i++) {
-                    state.entities.particles.push({ x, y, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, life: 20, color });
-                }
+                for(let i=0; i<8; i++) { state.entities.particles.push({ x, y, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, life: 20, color }); }
             },
 
             endGame: function() {
@@ -367,25 +312,57 @@
                 document.getElementById('final-score').innerText = state.score;
             },
 
-            saveScore: function() {
-                const name = document.getElementById('player-name').value || 'ANON';
-                const lb = JSON.parse(localStorage.getItem('molty_lb') || '[]');
-                lb.push({ name, score: state.score });
-                lb.sort((a, b) => b.score - a.score);
-                localStorage.setItem('molty_lb', JSON.stringify(lb.slice(0, 50)));
-                this.backToMenu();
-                this.showLeaderboard();
+            saveScore: async function() {
+                const name = document.getElementById('player-name').value.toUpperCase() || 'ANON';
+                const score = state.score;
+                const btn = document.querySelector('#submit-score-ui button');
+                btn.disabled = true; btn.innerText = "UPLOADING...";
+
+                try {
+                    // Fetch existing scores
+                    let lb = [];
+                    try {
+                        const res = await fetch(BUCKET_URL);
+                        if (res.ok) lb = await res.json();
+                    } catch(e) { console.log('New DB'); }
+
+                    // Add & Sort
+                    lb.push({ name, score, date: new Date().toISOString() });
+                    lb.sort((a, b) => b.score - a.score);
+                    lb = lb.slice(0, 50); // Keep top 50
+
+                    // Write back
+                    await fetch(BUCKET_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(lb)
+                    });
+                    
+                    this.backToMenu();
+                    this.showLeaderboard();
+                } catch(e) {
+                    alert('UPLOAD FAILED: ' + e);
+                    this.backToMenu();
+                }
             },
 
-            showLeaderboard: function() {
+            showLeaderboard: async function() {
                 document.getElementById('main-menu').style.display = 'none';
                 document.getElementById('submit-score-ui').style.display = 'none';
                 document.getElementById('leaderboard-ui').style.display = 'block';
                 const list = document.getElementById('leaderboard-list');
-                const lb = JSON.parse(localStorage.getItem('molty_lb') || '[]');
-                list.innerHTML = lb.map((e, i) => 
-                    `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
-                ).join('') || '<p>NO DATA</p>';
+                list.innerHTML = '<p class="loading">CONNECTING TO MAINFRAME...</p>';
+
+                try {
+                    const res = await fetch(BUCKET_URL);
+                    if (!res.ok) throw new Error('DB Offline');
+                    const lb = await res.json();
+                    
+                    list.innerHTML = lb.map((e, i) => 
+                        `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
+                    ).join('') || '<p>NO DATA</p>';
+                } catch(e) {
+                    list.innerHTML = '<p style="color:red">CONNECTION FAILED</p>';
+                }
             },
 
             backToMenu: function() {
@@ -393,6 +370,8 @@
                 document.getElementById('submit-score-ui').style.display = 'none';
                 document.getElementById('game-container').style.display = 'none';
                 document.getElementById('main-menu').style.display = 'flex';
+                document.querySelector('#submit-score-ui button').disabled = false;
+                document.querySelector('#submit-score-ui button').innerText = "UPLOAD RECORD";
             }
         };
 
