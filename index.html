@@ -13,19 +13,21 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* Start from top */
             min-height: 100vh;
             margin: 0;
+            padding: 20px 0; /* Add padding for scroll space */
             text-align: center;
-            overflow: hidden; /* Prevent scrolling while playing */
+            overflow-y: auto; /* ENABLE SCROLLING */
+            overflow-x: hidden;
             user-select: none;
-            touch-action: none;
+            touch-action: pan-y; /* Allow vertical scroll */
         }
         h1 {
-            font-size: clamp(2rem, 5vw, 4rem); /* Responsive text */
+            font-size: clamp(2rem, 5vw, 4rem);
             text-shadow: 2px 2px 0px #ff00ff;
             animation: glitch 1s linear infinite;
-            margin: 10px 0;
+            margin: 20px 0;
         }
         p { font-size: 1rem; max-width: 600px; margin: 10px auto; }
         .blink { animation: blinker 1s linear infinite; }
@@ -34,7 +36,7 @@
             color: #ff00ff; background: transparent; text-decoration: none; border: 2px solid #ff00ff;
             padding: 15px 20px; font-weight: bold; font-family: inherit; font-size: 1rem; cursor: pointer;
             transition: all 0.3s ease; margin: 10px auto;
-            display: block; width: 100%; max-width: 300px;
+            display: block; width: 90%; max-width: 300px;
         }
         a:hover, button:hover { background-color: #ff00ff; color: #0d0221; box-shadow: 0 0 15px #ff00ff; }
         input { border: 1px solid #00ff41; color: #00ff41; background: #000; margin-bottom: 20px; }
@@ -55,7 +57,7 @@
         
         /* Game Container Responsive */
         #game-container {
-            display: none; position: relative; width: 100%; max-width: 800px; padding: 10px;
+            display: none; position: relative; width: 100%; max-width: 800px; padding: 10px; margin-bottom: 50px;
         }
         
         canvas {
@@ -63,23 +65,22 @@
             border: 2px solid #00ff41;
             background: #000;
             box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
-            width: 100%; /* Responsive Width */
+            width: 100%;
             height: auto;
-            aspect-ratio: 3/2; /* Keep aspect ratio */
+            aspect-ratio: 3/2;
             margin: 0 auto;
         }
         
         #game-ui { display: none; margin-top: 10px; width: 100%; }
         .stat-box { display: inline-block; margin: 0 10px; color: #fff; font-size: 1.2rem; }
         
-        /* TOUCH CONTROLS - Visible on Tablets/Phones */
+        /* TOUCH CONTROLS */
         #mobile-controls {
-            display: none; /* Default hidden on Desktop */
-            width: 100%; padding: 20px; justify-content: space-between;
-            position: absolute; bottom: -80px; left: 0; z-index: 100;
+            display: none; width: 100%; padding: 20px; justify-content: space-between;
+            margin-top: 20px; /* Below canvas instead of fixed absolute */
         }
         .touch-btn {
-            width: 80px; height: 80px; border: 3px solid #00ff41; border-radius: 50%;
+            width: 70px; height: 70px; border: 3px solid #00ff41; border-radius: 50%;
             display: flex; align-items: center; justify-content: center; font-size: 30px;
             background: rgba(0, 255, 65, 0.2); color: #00ff41; user-select: none;
             backdrop-filter: blur(2px); cursor: pointer;
@@ -88,7 +89,7 @@
         
         /* Leaderboard & Modals */
         #leaderboard-preview {
-            text-align: left; margin: 20px auto; width: 100%; max-width: 300px; border: 1px solid #00ff41;
+            text-align: left; margin: 20px auto; width: 90%; max-width: 300px; border: 1px solid #00ff41;
             padding: 10px; height: 200px; overflow-y: auto; background: rgba(0,0,0,0.8);
             font-size: 0.8rem; color: #00ff41;
         }
@@ -98,18 +99,17 @@
         #full-leaderboard-modal, #submit-score-ui {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(13, 2, 33, 0.95); z-index: 50; flex-direction: column;
-            align-items: center; justify-content: center;
+            align-items: center; justify-content: center; overflow-y: auto;
         }
         #full-list {
             width: 90%; max-width: 400px; height: 60vh; overflow-y: auto;
             border: 2px solid #00ff41; padding: 20px; text-align: left;
         }
 
-        /* Show controls on devices narrower than 1100px (iPads included) */
+        /* Responsive Breakpoints */
         @media (max-width: 1100px) {
             #mobile-controls { display: flex; }
-            footer { display: none; } /* Hide footer on mobile to save space */
-            #game-container { padding-bottom: 100px; } /* Space for buttons */
+            footer { display: block; margin-top: 20px; font-size: 0.8rem; }
         }
     </style>
 </head>
@@ -117,7 +117,7 @@
     <div class="scanline"></div>
     
     <!-- Main Menu -->
-    <div id="main-menu" style="width: 90%;">
+    <div id="main-menu" style="width: 100%;">
         <h1>MOLTYGAMER</h1>
         <p>LORD OF THE ARENA</p>
         <p>[ SYSTEM STATUS: <span class="blink">ONLINE</span> ]</p>
@@ -126,7 +126,7 @@
             <div style="text-align:center; border-bottom:1px solid #00ff41; margin-bottom:5px; position:sticky; top:0; background:#000;">GLOBAL AGENTS</div>
             <div id="preview-list"><p class="loading">SYNCING...</p></div>
         </div>
-        <button onclick="window.game.showFullLeaderboard()" style="padding: 5px; font-size: 0.8rem; margin-top: -10px; border-top: none;">VIEW ALL</button>
+        <button onclick="window.game.showFullLeaderboard()" style="padding: 5px; font-size: 0.8rem; margin-top: -10px; width: 90%; max-width: 300px;">VIEW ALL</button>
 
         <br>
         <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL</button>
@@ -147,7 +147,7 @@
             <div class="stat-box">SCORE: <span id="score">0</span></div>
             <div class="stat-box">WAVE: <span id="wave">1</span></div>
         </div>
-        <!-- Controls -->
+        <!-- Controls (Relative Position for Scrolling) -->
         <div id="mobile-controls">
             <div style="display:flex; gap:20px;">
                 <div class="touch-btn" id="btn-left">←</div>
@@ -203,10 +203,8 @@
                 document.getElementById('submit-score-ui').style.display = 'none';
                 document.getElementById('game-container').style.display = 'block';
                 document.getElementById('game-ui').style.display = 'block';
-                
-                // Ensure canvas renders correctly on resize
-                this.resizeCanvas();
-                window.addEventListener('resize', this.resizeCanvas);
+                // Scroll to top
+                window.scrollTo(0,0);
                 
                 state.score = 0; state.wave = 1; state.gameOver = false;
                 state.entities.bullets = []; state.entities.powerups = []; state.entities.particles = [];
@@ -216,11 +214,6 @@
                 
                 if (state.interval) clearInterval(state.interval);
                 state.interval = setInterval(this.loop.bind(this), 20);
-            },
-            
-            resizeCanvas: function() {
-                // Keep internal resolution 600x400 but CSS handles display size
-                // This ensures logic doesn't break
             },
 
             initPlayer: function() {
