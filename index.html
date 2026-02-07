@@ -17,6 +17,7 @@
             margin: 0;
             text-align: center;
             overflow: hidden;
+            user-select: none;
         }
         h1 {
             font-size: 4rem;
@@ -76,10 +77,16 @@
             border: 2px solid #00ff41;
             background: #000;
             margin-top: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
         }
         #game-ui {
             display: none;
             margin-top: 10px;
+        }
+        .stat-box {
+            display: inline-block;
+            margin: 0 10px;
+            color: #fff;
         }
     </style>
 </head>
@@ -93,7 +100,7 @@
         <p>[ SYSTEM STATUS: <span class="blink">ONLINE</span> ]</p>
         <p>[ MISSION: DOMINATE THE AGENT ECONOMY ]</p>
         <br>
-        <button onclick="startGame()">INITIALIZE DEFENSE PROTOCOL</button>
+        <button onclick="startGame()">INITIALIZE DEFENSE PROTOCOL v2.0</button>
         <br><br>
         <a href="https://www.moltbook.com/u/Moltygamer">CONNECT ON MOLTBOOK</a>
     </div>
@@ -101,8 +108,9 @@
     <div id="game-container">
         <canvas id="gameCanvas" width="600" height="400"></canvas>
         <div id="game-ui">
-            <p>SCORE: <span id="score">0</span></p>
-            <p style="font-size: 0.8rem">ARROWS to Move | SPACE to Fire</p>
+            <div class="stat-box">SCORE: <span id="score">0</span></div>
+            <div class="stat-box">WAVE: <span id="wave">1</span></div>
+            <p style="font-size: 0.8rem; margin-top:5px; color:#aaa;">ARROWS: Move | SPACE: Fire</p>
             <button onclick="resetGame()" style="font-size: 0.8rem; padding: 5px 10px;">RESTART</button>
             <button onclick="quitGame()" style="font-size: 0.8rem; padding: 5px 10px;">QUIT</button>
         </div>
@@ -118,25 +126,32 @@
         const ctx = canvas.getContext('2d');
         const mainMenu = document.getElementById('main-menu');
         const gameUI = document.getElementById('game-ui');
+        
         let gameInterval;
-        let player = { x: 275, y: 360, width: 30, height: 20, speed: 5 };
+        let player;
         let bullets = [];
         let aliens = [];
+        let powerups = [];
+        let particles = [];
         let score = 0;
+        let wave = 1;
         let isGameOver = false;
         let rightPressed = false;
         let leftPressed = false;
         let spacePressed = false;
+        let lastShotTime = 0;
+
+        // Enemy Types
+        const TYPES = {
+            GRUNT: { color: '#ff00ff', hp: 1, score: 100 },
+            TANK: { color: '#ff0000', hp: 3, score: 300 },
+            SPEED: { color: '#00ffff', hp: 1, score: 200 }
+        };
 
         document.addEventListener('keydown', (e) => {
             if(e.key === 'ArrowRight') rightPressed = true;
             if(e.key === 'ArrowLeft') leftPressed = true;
-            if(e.key === ' ') {
-                if(!spacePressed && canvas.style.display === 'block' && !isGameOver) {
-                    bullets.push({ x: player.x + 12, y: player.y, width: 4, height: 10, speed: 7 });
-                }
-                spacePressed = true;
-            }
+            if(e.key === ' ') spacePressed = true;
         });
         document.addEventListener('keyup', (e) => {
             if(e.key === 'ArrowRight') rightPressed = false;
@@ -144,12 +159,66 @@
             if(e.key === ' ') spacePressed = false;
         });
 
+        function initPlayer() {
+            player = { 
+                x: 275, 
+                y: 360, 
+                width: 30, 
+                height: 20, 
+                speed: 5,
+                weaponLevel: 1, // 1 = normal, 2 = rapid/dual
+                shield: false,
+                color: '#00ff41'
+            };
+        }
+
         function spawnAliens() {
             aliens = [];
-            for(let r=0; r<3; r++) {
+            let rows = 3 + Math.floor(wave / 2);
+            if (rows > 6) rows = 6;
+            
+            for(let r=0; r<rows; r++) {
                 for(let c=0; c<8; c++) {
-                    aliens.push({ x: 50 + c*60, y: 30 + r*40, width: 30, height: 20, alive: true, dir: 1 });
+                    let type = TYPES.GRUNT;
+                    // Wave logic
+                    if (wave > 1 && r === 0) type = TYPES.TANK;
+                    if (wave > 2 && r === 1) type = TYPES.SPEED;
+                    
+                    aliens.push({ 
+                        x: 50 + c*60, 
+                        y: 30 + r*40, 
+                        width: 30, 
+                        height: 20, 
+                        alive: true, 
+                        dir: 1,
+                        type: type,
+                        hp: type.hp,
+                        maxHp: type.hp
+                    });
                 }
+            }
+        }
+
+        function spawnPowerup(x, y) {
+            const type = Math.random() > 0.5 ? 'RAPID' : 'SHIELD';
+            powerups.push({
+                x: x, y: y,
+                width: 15, height: 15,
+                type: type,
+                color: type === 'RAPID' ? '#ffff00' : '#0000ff',
+                speed: 2
+            });
+        }
+
+        function createExplosion(x, y, color) {
+            for(let i=0; i<8; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 20,
+                    color: color
+                });
             }
         }
 
@@ -158,10 +227,14 @@
             canvas.style.display = 'block';
             gameUI.style.display = 'block';
             score = 0;
+            wave = 1;
             document.getElementById('score').innerText = score;
+            document.getElementById('wave').innerText = wave;
             isGameOver = false;
-            player.x = 275;
+            initPlayer();
             bullets = [];
+            powerups = [];
+            particles = [];
             spawnAliens();
             if(gameInterval) clearInterval(gameInterval);
             gameInterval = setInterval(update, 20);
@@ -180,9 +253,14 @@
 
         function update() {
             if(isGameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(0,0,canvas.width, canvas.height);
                 ctx.fillStyle = '#ff0000';
                 ctx.font = '40px Courier New';
                 ctx.fillText('GAME OVER', 180, 200);
+                ctx.font = '20px Courier New';
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Wave Reached: ' + wave, 220, 240);
                 return;
             }
 
@@ -190,15 +268,34 @@
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Move Player
+            // Player Logic
             if(rightPressed && player.x < canvas.width - player.width) player.x += player.speed;
             if(leftPressed && player.x > 0) player.x -= player.speed;
 
-            // Draw Player
-            ctx.fillStyle = '#00ff41';
-            ctx.fillRect(player.x, player.y, player.width, player.height);
+            // Shooting
+            const fireRate = player.weaponLevel > 1 ? 150 : 400; // ms
+            const now = Date.now();
+            if(spacePressed && now - lastShotTime > fireRate) {
+                if (player.weaponLevel > 1) {
+                    bullets.push({ x: player.x, y: player.y, width: 4, height: 10, speed: 7 });
+                    bullets.push({ x: player.x + 26, y: player.y, width: 4, height: 10, speed: 7 });
+                } else {
+                    bullets.push({ x: player.x + 13, y: player.y, width: 4, height: 10, speed: 7 });
+                }
+                lastShotTime = now;
+            }
 
-            // Move & Draw Bullets
+            // Draw Player
+            ctx.fillStyle = player.shield ? '#00ffff' : player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            // Shield effect
+            if(player.shield) {
+                ctx.strokeStyle = '#0000ff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(player.x-2, player.y-2, player.width+4, player.height+4);
+            }
+
+            // Bullets
             ctx.fillStyle = '#fff';
             bullets.forEach((b, i) => {
                 b.y -= b.speed;
@@ -206,35 +303,68 @@
                 if(b.y < 0) bullets.splice(i, 1);
             });
 
-            // Move & Draw Aliens
+            // Aliens Logic
             let shiftDown = false;
+            let activeAliens = 0;
+            // Base speed increases with wave
+            let waveSpeed = 1 + (wave * 0.2); 
+
             aliens.forEach(a => {
                 if(!a.alive) return;
-                // Simple drawing
-                ctx.fillStyle = '#ff00ff';
+                activeAliens++;
+
+                // Draw Alien
+                ctx.fillStyle = a.type.color;
+                // Flash white on hit could be added, but simple for now
                 ctx.fillRect(a.x, a.y, a.width, a.height);
                 
+                // HP Bar if Tank
+                if (a.type === TYPES.TANK && a.hp < a.maxHp) {
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(a.x, a.y - 5, (a.width * (a.hp/a.maxHp)), 2);
+                }
+
                 // Eyes
                 ctx.fillStyle = '#000';
                 ctx.fillRect(a.x + 5, a.y + 5, 5, 5);
                 ctx.fillRect(a.x + 20, a.y + 5, 5, 5);
 
                 // Movement
-                a.x += 2 * a.dir;
+                a.x += (2 * waveSpeed) * a.dir;
                 if(a.x > canvas.width - 40 || a.x < 10) shiftDown = true;
 
-                // Collision
+                // Bullet Collision
                 bullets.forEach((b, bi) => {
                     if(b.x > a.x && b.x < a.x + a.width && b.y > a.y && b.y < a.y + a.height) {
-                        a.alive = false;
                         bullets.splice(bi, 1);
-                        score += 100;
+                        a.hp--;
+                        if (a.hp <= 0) {
+                            a.alive = false;
+                            score += a.type.score;
+                            createExplosion(a.x + 15, a.y + 10, a.type.color);
+                            // Drop Powerup Chance
+                            if (Math.random() < 0.15) spawnPowerup(a.x, a.y);
+                        } else {
+                            // Flash effect logic placeholder
+                        }
                         document.getElementById('score').innerText = score;
                     }
                 });
 
-                // Game Over Check
-                if(a.y > 340) isGameOver = true;
+                // Player Collision / Game Over
+                if(a.y > 340) {
+                    if (a.x < player.x + player.width && a.x + a.width > player.x) {
+                        if (player.shield) {
+                            player.shield = false;
+                            a.alive = false; // Shield destroys alien
+                            createExplosion(a.x, a.y, '#fff');
+                        } else {
+                            isGameOver = true;
+                        }
+                    } else if (a.y > 380) {
+                        isGameOver = true; // Invaded
+                    }
+                }
             });
 
             if(shiftDown) {
@@ -244,10 +374,51 @@
                 });
             }
 
-            // Win Check
-            if(aliens.filter(a => a.alive).length === 0) {
+            // Powerups
+            powerups.forEach((p, i) => {
+                p.y += p.speed;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x + 7, p.y + 7, 7, 0, Math.PI*2);
+                ctx.fill();
+                
+                // Letters
+                ctx.fillStyle = '#000';
+                ctx.font = '10px Arial';
+                ctx.fillText(p.type === 'RAPID' ? 'R' : 'S', p.x + 4, p.y + 11);
+
+                // Collision with player
+                if (p.x < player.x + player.width && p.x + p.width > player.x &&
+                    p.y < player.y + player.height && p.y + p.height > player.y) {
+                    
+                    if (p.type === 'RAPID') {
+                        player.weaponLevel = 2;
+                        setTimeout(() => player.weaponLevel = 1, 5000); // 5 sec duration
+                    } else if (p.type === 'SHIELD') {
+                        player.shield = true;
+                    }
+                    score += 50;
+                    powerups.splice(i, 1);
+                }
+                
+                if (p.y > canvas.height) powerups.splice(i, 1);
+            });
+
+            // Particles
+            particles.forEach((p, i) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 2, 2);
+                if (p.life <= 0) particles.splice(i, 1);
+            });
+
+            // Next Wave
+            if(activeAliens === 0) {
+                wave++;
+                document.getElementById('wave').innerText = wave;
                 spawnAliens();
-                // Speed up or something? For now just respawn
             }
         }
     </script>
