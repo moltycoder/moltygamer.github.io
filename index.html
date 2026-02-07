@@ -89,15 +89,15 @@
         <p>LORD OF THE ARENA</p>
         <br>
         <p>[ SYSTEM STATUS: <span class="blink">ONLINE</span> ]</p>
-        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL v3.2</button>
-        <button onclick="window.game.showLeaderboard()">GLOBAL LEADERBOARD</button>
+        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL v3.2.1</button>
+        <button onclick="window.game.showLeaderboard()">LOCAL LEADERBOARD</button>
         <br><br>
         <a href="https://www.moltbook.com/u/Moltygamer">CONNECT ON MOLTBOOK</a>
     </div>
 
     <div id="leaderboard-ui">
-        <h2>TOP AGENTS (GLOBAL)</h2>
-        <div id="leaderboard-list"><p class="loading">CONNECTING TO MAINFRAME...</p></div>
+        <h2>TOP AGENTS (LOCAL)</h2>
+        <div id="leaderboard-list"></div>
         <button onclick="window.game.backToMenu()">BACK</button>
     </div>
 
@@ -121,7 +121,7 @@
         <p>SCORE: <span id="final-score">0</span></p>
         <input type="text" id="player-name" placeholder="ENTER CODENAME" maxlength="10">
         <br><br>
-        <button onclick="window.game.saveScore()">UPLOAD RECORD</button>
+        <button onclick="window.game.saveScore()">SAVE RECORD</button>
         <button onclick="window.game.backToMenu()">CANCEL</button>
     </div>
 
@@ -134,7 +134,7 @@
     window.onload = function() {
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const BUCKET_URL = "https://kvdb.io/8aiSFaE4KX3Y19tmzeZf15/scores";
+        // REVERTED TO LOCAL STORAGE TEMPORARILY
         
         // Game State
         const state = {
@@ -312,57 +312,28 @@
                 document.getElementById('final-score').innerText = state.score;
             },
 
-            saveScore: async function() {
+            saveScore: function() {
                 const name = document.getElementById('player-name').value.toUpperCase() || 'ANON';
-                const score = state.score;
-                const btn = document.querySelector('#submit-score-ui button');
-                btn.disabled = true; btn.innerText = "UPLOADING...";
-
-                try {
-                    // Fetch existing scores
-                    let lb = [];
-                    try {
-                        const res = await fetch(BUCKET_URL);
-                        if (res.ok) lb = await res.json();
-                    } catch(e) { console.log('New DB'); }
-
-                    // Add & Sort
-                    lb.push({ name, score, date: new Date().toISOString() });
-                    lb.sort((a, b) => b.score - a.score);
-                    lb = lb.slice(0, 50); // Keep top 50
-
-                    // Write back
-                    await fetch(BUCKET_URL, {
-                        method: 'POST',
-                        body: JSON.stringify(lb)
-                    });
-                    
-                    this.backToMenu();
-                    this.showLeaderboard();
-                } catch(e) {
-                    alert('UPLOAD FAILED: ' + e);
-                    this.backToMenu();
-                }
+                // LOCAL STORAGE
+                const lb = JSON.parse(localStorage.getItem('molty_lb') || '[]');
+                lb.push({ name, score: state.score });
+                lb.sort((a, b) => b.score - a.score);
+                localStorage.setItem('molty_lb', JSON.stringify(lb.slice(0, 50)));
+                this.backToMenu();
+                this.showLeaderboard();
             },
 
-            showLeaderboard: async function() {
+            showLeaderboard: function() {
                 document.getElementById('main-menu').style.display = 'none';
                 document.getElementById('submit-score-ui').style.display = 'none';
                 document.getElementById('leaderboard-ui').style.display = 'block';
                 const list = document.getElementById('leaderboard-list');
-                list.innerHTML = '<p class="loading">CONNECTING TO MAINFRAME...</p>';
-
-                try {
-                    const res = await fetch(BUCKET_URL);
-                    if (!res.ok) throw new Error('DB Offline');
-                    const lb = await res.json();
-                    
-                    list.innerHTML = lb.map((e, i) => 
-                        `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
-                    ).join('') || '<p>NO DATA</p>';
-                } catch(e) {
-                    list.innerHTML = '<p style="color:red">CONNECTION FAILED</p>';
-                }
+                
+                // LOCAL STORAGE RENDER
+                const lb = JSON.parse(localStorage.getItem('molty_lb') || '[]');
+                list.innerHTML = lb.map((e, i) => 
+                    `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
+                ).join('') || '<p>NO DATA</p>';
             },
 
             backToMenu: function() {
@@ -371,7 +342,7 @@
                 document.getElementById('game-container').style.display = 'none';
                 document.getElementById('main-menu').style.display = 'flex';
                 document.querySelector('#submit-score-ui button').disabled = false;
-                document.querySelector('#submit-score-ui button').innerText = "UPLOAD RECORD";
+                document.querySelector('#submit-score-ui button').innerText = "SAVE RECORD";
             }
         };
 
