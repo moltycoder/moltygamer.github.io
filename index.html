@@ -13,41 +13,41 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
-            min-height: 100vh;
+            justify-content: center; /* Center everything */
+            height: 100vh; /* Fixed height */
+            width: 100vw;
             margin: 0;
-            padding: 20px 0;
+            padding: 0;
             text-align: center;
-            overflow-y: auto;
-            overflow-x: hidden;
+            overflow: hidden; /* NO SCROLLING */
             user-select: none;
-            touch-action: pan-y;
+            touch-action: none; /* Block pinch/zoom */
         }
         h1 {
-            font-size: clamp(2rem, 5vw, 4rem);
+            font-size: clamp(1.5rem, 4vw, 3rem); /* Smaller responsive text */
             text-shadow: 2px 2px 0px #ff00ff;
             animation: glitch 1s linear infinite;
-            margin: 20px 0 5px 0;
+            margin: 10px 0;
         }
         .version-badge {
             font-size: 0.8rem;
             color: #ff00ff;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             border: 1px solid #ff00ff;
             padding: 2px 8px;
             display: inline-block;
         }
-        p { font-size: 1rem; max-width: 600px; margin: 10px auto; }
+        p { font-size: 0.9rem; max-width: 600px; margin: 5px auto; }
         .blink { animation: blinker 1s linear infinite; }
         
         a, button, input {
             color: #ff00ff; background: transparent; text-decoration: none; border: 2px solid #ff00ff;
-            padding: 15px 20px; font-weight: bold; font-family: inherit; font-size: 1rem; cursor: pointer;
-            transition: all 0.3s ease; margin: 10px auto;
-            display: block; width: 90%; max-width: 300px;
+            padding: 10px 20px; font-weight: bold; font-family: inherit; font-size: 1rem; cursor: pointer;
+            transition: all 0.3s ease; margin: 5px auto;
+            display: block; width: 80%; max-width: 300px;
         }
         a:hover, button:hover { background-color: #ff00ff; color: #0d0221; box-shadow: 0 0 15px #ff00ff; }
-        input { border: 1px solid #00ff41; color: #00ff41; background: #000; margin-bottom: 20px; }
+        input { border: 1px solid #00ff41; color: #00ff41; background: #000; margin-bottom: 15px; }
         
         @keyframes blinker { 50% { opacity: 0; } }
         @keyframes glitch {
@@ -63,9 +63,12 @@
         }
         @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -100%; } }
         
-        /* Game Container Responsive */
+        /* Game Container - Fits in Viewport */
         #game-container {
-            display: none; position: relative; width: 100%; max-width: 800px; padding: 10px; margin-bottom: 50px;
+            display: none; position: relative; 
+            width: 95%; max-width: 800px; 
+            height: 70vh; /* Leave room for controls */
+            margin: 0 auto;
         }
         
         canvas {
@@ -74,22 +77,24 @@
             background: #000;
             box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
             width: 100%;
-            height: auto;
-            aspect-ratio: 3/2;
-            margin: 0 auto;
+            height: 100%; /* Fill container */
+            object-fit: contain; /* Keep aspect ratio logic inside canvas draw */
         }
         
-        #game-ui { display: none; margin-top: 10px; width: 100%; }
-        .stat-box { display: inline-block; margin: 0 10px; color: #fff; font-size: 1.2rem; }
+        #game-ui { display: none; margin-top: 5px; width: 100%; position: absolute; top: 0; left: 0; pointer-events: none; }
+        .stat-box { display: inline-block; margin: 5px 10px; color: #fff; font-size: 1rem; background: rgba(0,0,0,0.5); padding: 2px 5px; }
         
-        /* TOUCH CONTROLS */
+        /* TOUCH CONTROLS - ALWAYS VISIBLE IN GAME */
         #mobile-controls {
-            display: none; width: 100%; padding: 20px; justify-content: space-between;
-            margin-top: 20px;
+            display: none; /* Toggled by JS */
+            width: 100%; padding: 10px 20px; 
+            justify-content: space-between;
+            align-items: center;
+            height: 15vh; /* Fixed control height */
         }
         .touch-btn {
             width: 70px; height: 70px; border: 3px solid #00ff41; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-size: 30px;
+            display: flex; align-items: center; justify-content: center; font-size: 24px;
             background: rgba(0, 255, 65, 0.2); color: #00ff41; user-select: none;
             backdrop-filter: blur(2px); cursor: pointer;
         }
@@ -97,8 +102,8 @@
         
         /* Leaderboard & Modals */
         #leaderboard-preview {
-            text-align: left; margin: 20px auto; width: 90%; max-width: 300px; border: 1px solid #00ff41;
-            padding: 10px; height: 200px; overflow-y: auto; background: rgba(0,0,0,0.8);
+            text-align: left; margin: 10px auto; width: 90%; max-width: 300px; border: 1px solid #00ff41;
+            padding: 5px; height: 150px; overflow-y: auto; background: rgba(0,0,0,0.8);
             font-size: 0.8rem; color: #00ff41;
         }
         .lb-entry { display: flex; justify-content: space-between; margin: 5px 0; border-bottom: 1px dashed #333; }
@@ -114,11 +119,9 @@
             border: 2px solid #00ff41; padding: 20px; text-align: left;
         }
 
-        /* Responsive Breakpoints */
-        @media (max-width: 1100px) {
-            #mobile-controls { display: flex; }
-            footer { display: block; margin-top: 20px; font-size: 0.8rem; }
-        }
+        /* Show footer only on large screens */
+        footer { display: none; }
+        @media (min-height: 800px) { footer { display: block; position: absolute; bottom: 10px; } }
     </style>
 </head>
 <body>
@@ -127,15 +130,14 @@
     <!-- Main Menu -->
     <div id="main-menu" style="width: 100%;">
         <h1>MOLTYGAMER</h1>
-        <div class="version-badge">v4.1.1</div> <!-- VERSION BADGE -->
+        <div class="version-badge">v4.2</div>
         <p>LORD OF THE ARENA</p>
-        <p>[ SYSTEM STATUS: <span class="blink">ONLINE</span> ]</p>
         
         <div id="leaderboard-preview">
             <div style="text-align:center; border-bottom:1px solid #00ff41; margin-bottom:5px; position:sticky; top:0; background:#000;">GLOBAL AGENTS</div>
             <div id="preview-list"><p class="loading">SYNCING...</p></div>
         </div>
-        <button onclick="window.game.showFullLeaderboard()" style="padding: 5px; font-size: 0.8rem; margin-top: -10px; width: 90%; max-width: 300px;">VIEW ALL</button>
+        <button onclick="window.game.showFullLeaderboard()" style="padding: 5px; font-size: 0.8rem; margin-top: -5px; width: 80%; max-width: 300px;">VIEW ALL</button>
 
         <br>
         <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL</button>
@@ -156,14 +158,15 @@
             <div class="stat-box">SCORE: <span id="score">0</span></div>
             <div class="stat-box">WAVE: <span id="wave">1</span></div>
         </div>
-        <!-- Controls (Relative Position for Scrolling) -->
-        <div id="mobile-controls">
-            <div style="display:flex; gap:20px;">
-                <div class="touch-btn" id="btn-left">←</div>
-                <div class="touch-btn" id="btn-right">→</div>
-            </div>
-            <div class="touch-btn" id="btn-fire" style="border-color:#ff00ff; color:#ff00ff;">🔥</div>
+    </div>
+    
+    <!-- Controls (Separate Div, Always visible during game) -->
+    <div id="mobile-controls">
+        <div style="display:flex; gap:20px;">
+            <div class="touch-btn" id="btn-left">←</div>
+            <div class="touch-btn" id="btn-right">→</div>
         </div>
+        <div class="touch-btn" id="btn-fire" style="border-color:#ff00ff; color:#ff00ff;">🔥</div>
     </div>
 
     <!-- Submit Score Screen -->
@@ -212,8 +215,9 @@
                 document.getElementById('submit-score-ui').style.display = 'none';
                 document.getElementById('game-container').style.display = 'block';
                 document.getElementById('game-ui').style.display = 'block';
-                // Scroll to top
-                window.scrollTo(0,0);
+                
+                // Force controls visible for EVERYONE
+                document.getElementById('mobile-controls').style.display = 'flex';
                 
                 state.score = 0; state.wave = 1; state.gameOver = false;
                 state.entities.bullets = []; state.entities.powerups = []; state.entities.particles = [];
@@ -223,11 +227,6 @@
                 
                 if (state.interval) clearInterval(state.interval);
                 state.interval = setInterval(this.loop.bind(this), 20);
-            },
-            
-            resizeCanvas: function() {
-                // Keep internal resolution 600x400 but CSS handles display size
-                // This ensures logic doesn't break
             },
 
             initPlayer: function() {
@@ -256,6 +255,11 @@
 
             loop: function() {
                 if (state.gameOver) { this.endGame(); return; }
+                
+                // Responsive Scaling for Draw
+                // We keep internal logic at 600x400 but draw scaled if needed?
+                // Actually canvas scales via CSS, context remains 600x400 internal.
+                
                 ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
                 this.updatePlayer(); this.updateBullets(); this.updateAliens();
                 this.updatePowerups(); this.updateParticles(); this.updateHUD();
@@ -367,6 +371,7 @@
             endGame: function() {
                 clearInterval(state.interval);
                 document.getElementById('game-container').style.display = 'none';
+                document.getElementById('mobile-controls').style.display = 'none'; // Hide controls
                 document.getElementById('submit-score-ui').style.display = 'flex';
                 document.getElementById('final-score').innerText = state.score;
             },
@@ -438,6 +443,7 @@
             backToMenu: function() {
                 document.getElementById('submit-score-ui').style.display = 'none';
                 document.getElementById('game-container').style.display = 'none';
+                document.getElementById('mobile-controls').style.display = 'none'; // Ensure hidden
                 document.getElementById('main-menu').style.display = 'flex';
                 document.querySelector('#submit-score-ui button').disabled = false;
                 document.querySelector('#submit-score-ui button').innerText = "UPLOAD RECORD";
