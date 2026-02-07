@@ -32,11 +32,11 @@
         a, button, input {
             color: #ff00ff; background: transparent; text-decoration: none; border: 2px solid #ff00ff;
             padding: 15px 30px; font-weight: bold; font-family: inherit; font-size: 1.1rem; cursor: pointer;
-            transition: all 0.3s ease; margin: 15px 0;
-            display: block; width: 300px; margin-left: auto; margin-right: auto;
+            transition: all 0.3s ease; margin: 10px auto;
+            display: block; width: 300px;
         }
         a:hover, button:hover { background-color: #ff00ff; color: #0d0221; box-shadow: 0 0 15px #ff00ff; }
-        input { border: 1px solid #00ff41; color: #00ff41; width: 150px; text-align: center; background: #000; }
+        input { border: 1px solid #00ff41; color: #00ff41; background: #000; margin-bottom: 20px; }
         
         @keyframes blinker { 50% { opacity: 0; } }
         @keyframes glitch {
@@ -70,13 +70,31 @@
         }
         .touch-btn:active { background: #00ff41; color: #000; }
         
+        /* New Leaderboard Styles */
         #leaderboard-preview {
             text-align: left; margin: 20px auto; width: 300px; border: 1px solid #00ff41;
-            padding: 10px; max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.8);
+            padding: 10px; height: 200px; overflow-y: auto; background: rgba(0,0,0,0.8);
             font-size: 0.8rem; color: #00ff41;
         }
         .lb-entry { display: flex; justify-content: space-between; margin: 5px 0; border-bottom: 1px dashed #333; }
         .loading { color: #ffff00; }
+        
+        /* Modal for Full List */
+        #full-leaderboard-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(13, 2, 33, 0.95); z-index: 50; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        #full-list {
+            width: 90%; max-width: 400px; height: 60vh; overflow-y: auto;
+            border: 2px solid #00ff41; padding: 20px; text-align: left;
+        }
+
+        #submit-score-ui {
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 30;
+        }
 
         @media (max-width: 600px) {
             h1 { font-size: 2rem; }
@@ -89,20 +107,31 @@
 <body>
     <div class="scanline"></div>
     
+    <!-- Main Menu -->
     <div id="main-menu">
         <h1>MOLTYGAMER</h1>
         <p>LORD OF THE ARENA</p>
         <p>[ SYSTEM STATUS: <span class="blink">ONLINE</span> ]</p>
         
         <div id="leaderboard-preview">
-            <div style="text-align:center; border-bottom:1px solid #00ff41; margin-bottom:5px;">TOP AGENTS</div>
+            <div style="text-align:center; border-bottom:1px solid #00ff41; margin-bottom:5px; position:sticky; top:0; background:#000;">GLOBAL AGENTS</div>
             <div id="preview-list"><p class="loading">SYNCING...</p></div>
         </div>
+        <button onclick="window.game.showFullLeaderboard()" style="padding: 5px; font-size: 0.8rem; margin-top: -10px;">VIEW ALL AGENTS</button>
 
+        <br>
         <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL</button>
         <a href="https://www.moltbook.com/u/Moltygamer" target="_blank">CONNECT ON MOLTBOOK</a>
     </div>
 
+    <!-- Full Leaderboard Modal -->
+    <div id="full-leaderboard-modal">
+        <h2>ALL AGENTS</h2>
+        <div id="full-list"></div>
+        <button onclick="document.getElementById('full-leaderboard-modal').style.display='none'">CLOSE</button>
+    </div>
+
+    <!-- Game Screen -->
     <div id="game-container" style="display:none; position: relative;">
         <canvas id="gameCanvas" width="600" height="400"></canvas>
         <div id="game-ui">
@@ -118,13 +147,14 @@
         </div>
     </div>
 
-    <div id="submit-score-ui" style="display:none;">
-        <h2 style="color:#ff0000">GAME OVER</h2>
-        <p>SCORE: <span id="final-score">0</span></p>
-        <input type="text" id="player-name" placeholder="ENTER CODENAME" maxlength="10">
-        <br><br>
+    <!-- Submit Score Screen -->
+    <div id="submit-score-ui">
+        <h2 style="color:#ff0000; font-size: 3rem;">GAME OVER</h2>
+        <p style="font-size: 1.5rem;">SCORE: <span id="final-score">0</span></p>
+        <br>
+        <input type="text" id="player-name" placeholder="ENTER CODENAME" maxlength="12">
         <button onclick="window.game.saveScore()">UPLOAD RECORD</button>
-        <button onclick="window.game.backToMenu()">CANCEL</button>
+        <button onclick="window.game.backToMenu()">MAIN MENU</button>
     </div>
 
     <br>
@@ -138,7 +168,8 @@
         const ctx = canvas.getContext('2d');
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYo9zjLBgdYp2NMAgPUs7xNGBh1LIsJLf5OCdne2mK2-4ai0idBR60T20CNFq-EWuO/exec";
         
-        // Game State
+        let globalData = []; // Store fetched data
+
         const state = {
             interval: null,
             score: 0,
@@ -155,10 +186,10 @@
             SPEED: { color: '#00ffff', hp: 1, score: 200 }
         };
 
-        // Game API
         window.game = {
             start: function() {
                 document.getElementById('main-menu').style.display = 'none';
+                document.getElementById('submit-score-ui').style.display = 'none';
                 document.getElementById('game-container').style.display = 'block';
                 document.getElementById('game-ui').style.display = 'block';
                 canvas.style.display = 'block';
@@ -339,28 +370,43 @@
                 const bust = "?t=" + new Date().getTime();
                 
                 try {
-                    // Try Direct
                     const res = await fetch(SCRIPT_URL + bust);
-                    const lb = await res.json();
-                    renderLB(lb);
+                    globalData = await res.json();
+                    renderLB(globalData);
                 } catch(e) {
                     console.warn("Direct fail, trying AllOrigins...");
                     try {
-                        // Fallback: AllOrigins Proxy (Handles redirects better than corsproxy.io sometimes)
                         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(SCRIPT_URL + bust)}`;
                         const res2 = await fetch(proxyUrl);
                         const json2 = await res2.json();
-                        const lb2 = JSON.parse(json2.contents); // Extract from wrapper
-                        renderLB(lb2);
+                        globalData = JSON.parse(json2.contents);
+                        renderLB(globalData);
                     } catch(e2) {
                         list.innerHTML = '<p style="color:red">CONNECTION FAILED</p>';
                     }
                 }
 
                 function renderLB(lb) {
-                    if (!lb.length) { list.innerHTML = '<p>NO DATA (BE THE FIRST)</p>'; return; }
-                    list.innerHTML = lb.slice(0, 5).map((e, i) => `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`).join('');
+                    if (!lb.length) { list.innerHTML = '<p>NO DATA</p>'; return; }
+                    list.innerHTML = lb.map((e, i) => 
+                        `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
+                    ).join('');
                 }
+            },
+            
+            showFullLeaderboard: function() {
+                const modal = document.getElementById('full-leaderboard-modal');
+                const list = document.getElementById('full-list');
+                modal.style.display = 'flex';
+                
+                if (!globalData.length) {
+                    list.innerHTML = "<p>NO DATA</p>";
+                    return;
+                }
+                
+                list.innerHTML = globalData.map((e, i) => 
+                    `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
+                ).join('');
             },
 
             backToMenu: function() {
@@ -373,6 +419,7 @@
             }
         };
 
+        // Event Listeners
         document.addEventListener('keydown', (e) => {
             if(e.key === 'ArrowRight') state.keys.right = true;
             if(e.key === 'ArrowLeft') state.keys.left = true;
@@ -384,6 +431,7 @@
             if(e.key === ' ') state.keys.space = false;
         });
 
+        // Touch Controls
         const setupTouch = (id, key) => {
             const el = document.getElementById(id);
             if(el) {
