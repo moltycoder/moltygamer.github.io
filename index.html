@@ -89,7 +89,7 @@
         <p>LORD OF THE ARENA</p>
         <br>
         <p>[ SYSTEM STATUS: <span class="blink">ONLINE</span> ]</p>
-        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL v3.3.1</button>
+        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL v3.3.2</button>
         <button onclick="window.game.showLeaderboard()">GLOBAL LEADERBOARD</button>
         <br><br>
         <a href="https://www.moltbook.com/u/Moltygamer">CONNECT ON MOLTBOOK</a>
@@ -134,7 +134,10 @@
     window.onload = function() {
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const API_URL = "https://script.google.com/macros/s/AKfycbzc8GFWa9iyr-DDAem68fy8JebIgkmi6RtP2Ha0cVmq1N6l2O66zWk21qcp8DPH_VlR/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzc8GFWa9iyr-DDAem68fy8JebIgkmi6RtP2Ha0cVmq1N6l2O66zWk21qcp8DPH_VlR/exec";
+        
+        // Use CORS Proxy for GET requests to handle redirects
+        const GET_URL = "https://corsproxy.io/?" + encodeURIComponent(SCRIPT_URL);
         
         // Game State
         const state = {
@@ -318,16 +321,17 @@
                 btn.disabled = true; btn.innerText = "UPLOADING...";
 
                 try {
-                    await fetch(API_URL, {
+                    // Use no-cors for POST (Fire and forget, assume success)
+                    await fetch(SCRIPT_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: name, score: state.score })
                     });
                     
-                    // Since no-cors is opaque, assume success
                     this.backToMenu();
-                    this.showLeaderboard();
+                    // Delay refresh to allow script to process
+                    setTimeout(() => this.showLeaderboard(), 1000);
                 } catch(e) {
                     alert('UPLOAD FAILED: ' + e);
                     btn.disabled = false; btn.innerText = "RETRY";
@@ -342,11 +346,12 @@
                 list.innerHTML = '<p class="loading">CONNECTING TO MAINFRAME...</p>';
 
                 try {
-                    const res = await fetch(API_URL);
+                    // Use CORS Proxy for GET
+                    const res = await fetch(GET_URL);
                     const lb = await res.json();
                     
                     if (!lb.length) {
-                        list.innerHTML = '<p>NO DATA</p>';
+                        list.innerHTML = '<p>NO DATA (BE THE FIRST)</p>';
                         return;
                     }
 
@@ -354,7 +359,8 @@
                         `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
                     ).join('');
                 } catch(e) {
-                    list.innerHTML = '<p style="color:red">CONNECTION FAILED</p>';
+                    list.innerHTML = '<p style="color:red">CONNECTION FAILED (CORS/PROXY ERROR)</p>';
+                    console.error(e);
                 }
             },
 
