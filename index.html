@@ -89,7 +89,7 @@
         <p>LORD OF THE ARENA</p>
         <br>
         <p>[ SYSTEM STATUS: <span class="blink">ONLINE</span> ]</p>
-        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL v3.3.3</button>
+        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL v3.3.4</button>
         <button onclick="window.game.showLeaderboard()">GLOBAL LEADERBOARD</button>
         <br><br>
         <a href="https://www.moltbook.com/u/Moltygamer">CONNECT ON MOLTBOOK</a>
@@ -135,9 +135,6 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYo9zjLBgdYp2NMAgPUs7xNGBh1LIsJLf5OCdne2mK2-4ai0idBR60T20CNFq-EWuO/exec";
-        
-        // Use CORS Proxy for GET requests to handle redirects
-        const GET_URL = "https://corsproxy.io/?" + encodeURIComponent(SCRIPT_URL);
         
         // Game State
         const state = {
@@ -346,8 +343,8 @@
                 list.innerHTML = '<p class="loading">CONNECTING TO MAINFRAME...</p>';
 
                 try {
-                    // Use CORS Proxy for GET
-                    const res = await fetch(GET_URL);
+                    // Try DIRECT connection (modern browsers handle 302 correctly)
+                    const res = await fetch(SCRIPT_URL);
                     const lb = await res.json();
                     
                     if (!lb.length) {
@@ -359,8 +356,18 @@
                         `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
                     ).join('');
                 } catch(e) {
-                    list.innerHTML = '<p style="color:red">CONNECTION FAILED (CORS/PROXY ERROR)</p>';
-                    console.error(e);
+                    list.innerHTML = '<p style="color:red">DIRECT CONNECT FAILED. TRYING PROXY...</p>';
+                    // Fallback to proxy if direct fails
+                    try {
+                        const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(SCRIPT_URL);
+                        const res2 = await fetch(proxyUrl);
+                        const lb2 = await res2.json();
+                        list.innerHTML = lb2.map((e, i) => 
+                            `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
+                        ).join('');
+                    } catch(e2) {
+                        list.innerHTML = '<p style="color:red">ALL CONNECTIONS FAILED</p>';
+                    }
                 }
             },
 
