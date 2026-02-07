@@ -26,15 +26,21 @@
             animation: glitch 1s linear infinite;
             margin: 10px 0;
         }
-        p { font-size: 1rem; max-width: 600px; }
+        p { font-size: 1rem; max-width: 600px; margin: 10px auto; }
         .blink { animation: blinker 1s linear infinite; }
+        
+        /* Button Styling */
         a, button, input {
             color: #ff00ff; background: transparent; text-decoration: none; border: 2px solid #ff00ff;
-            padding: 10px 20px; fontWeight: bold; font-family: inherit; font-size: 1rem; cursor: pointer;
-            transition: all 0.3s ease; margin: 5px;
+            padding: 15px 30px; font-weight: bold; font-family: inherit; font-size: 1.1rem; cursor: pointer;
+            transition: all 0.3s ease; margin: 15px 0; /* Vertical spacing */
+            display: block; /* Force new line */
+            width: 300px; /* Uniform width */
+            margin-left: auto; margin-right: auto;
         }
         a:hover, button:hover { background-color: #ff00ff; color: #0d0221; box-shadow: 0 0 15px #ff00ff; }
         input { border: 1px solid #00ff41; color: #00ff41; width: 150px; text-align: center; background: #000; }
+        
         @keyframes blinker { 50% { opacity: 0; } }
         @keyframes glitch {
             2%, 64% { transform: translate(2px,0) skew(0deg); }
@@ -78,6 +84,7 @@
             h1 { font-size: 2rem; }
             #mobile-controls { display: flex; }
             footer { display: none; }
+            a, button { width: 80%; }
         }
     </style>
 </head>
@@ -89,10 +96,10 @@
         <p>LORD OF THE ARENA</p>
         <br>
         <p>[ SYSTEM STATUS: <span class="blink">ONLINE</span> ]</p>
-        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL v3.3.4</button>
+        <br>
+        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL v3.4</button>
         <button onclick="window.game.showLeaderboard()">GLOBAL LEADERBOARD</button>
-        <br><br>
-        <a href="https://www.moltbook.com/u/Moltygamer">CONNECT ON MOLTBOOK</a>
+        <a href="https://www.moltbook.com/u/Moltygamer" target="_blank">CONNECT ON MOLTBOOK</a>
     </div>
 
     <div id="leaderboard-ui">
@@ -135,6 +142,7 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYo9zjLBgdYp2NMAgPUs7xNGBh1LIsJLf5OCdne2mK2-4ai0idBR60T20CNFq-EWuO/exec";
+        const GET_URL = "https://corsproxy.io/?" + encodeURIComponent(SCRIPT_URL);
         
         // Game State
         const state = {
@@ -318,16 +326,13 @@
                 btn.disabled = true; btn.innerText = "UPLOADING...";
 
                 try {
-                    // Use no-cors for POST (Fire and forget, assume success)
                     await fetch(SCRIPT_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: name, score: state.score })
                     });
-                    
                     this.backToMenu();
-                    // Delay refresh to allow script to process
                     setTimeout(() => this.showLeaderboard(), 1000);
                 } catch(e) {
                     alert('UPLOAD FAILED: ' + e);
@@ -343,31 +348,12 @@
                 list.innerHTML = '<p class="loading">CONNECTING TO MAINFRAME...</p>';
 
                 try {
-                    // Try DIRECT connection (modern browsers handle 302 correctly)
-                    const res = await fetch(SCRIPT_URL);
+                    const res = await fetch(GET_URL);
                     const lb = await res.json();
-                    
-                    if (!lb.length) {
-                        list.innerHTML = '<p>NO DATA (BE THE FIRST)</p>';
-                        return;
-                    }
-
-                    list.innerHTML = lb.map((e, i) => 
-                        `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
-                    ).join('');
+                    if (!lb.length) { list.innerHTML = '<p>NO DATA (BE THE FIRST)</p>'; return; }
+                    list.innerHTML = lb.map((e, i) => `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`).join('');
                 } catch(e) {
-                    list.innerHTML = '<p style="color:red">DIRECT CONNECT FAILED. TRYING PROXY...</p>';
-                    // Fallback to proxy if direct fails
-                    try {
-                        const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(SCRIPT_URL);
-                        const res2 = await fetch(proxyUrl);
-                        const lb2 = await res2.json();
-                        list.innerHTML = lb2.map((e, i) => 
-                            `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
-                        ).join('');
-                    } catch(e2) {
-                        list.innerHTML = '<p style="color:red">ALL CONNECTIONS FAILED</p>';
-                    }
+                    list.innerHTML = '<p style="color:red">CONNECTION FAILED (CORS/PROXY ERROR)</p>';
                 }
             },
 
@@ -381,7 +367,6 @@
             }
         };
 
-        // Event Listeners
         document.addEventListener('keydown', (e) => {
             if(e.key === 'ArrowRight') state.keys.right = true;
             if(e.key === 'ArrowLeft') state.keys.left = true;
@@ -393,7 +378,6 @@
             if(e.key === ' ') state.keys.space = false;
         });
 
-        // Touch Controls
         const setupTouch = (id, key) => {
             const el = document.getElementById(id);
             if(el) {
