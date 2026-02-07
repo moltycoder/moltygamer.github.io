@@ -29,14 +29,11 @@
         p { font-size: 1rem; max-width: 600px; margin: 10px auto; }
         .blink { animation: blinker 1s linear infinite; }
         
-        /* Button Styling */
         a, button, input {
             color: #ff00ff; background: transparent; text-decoration: none; border: 2px solid #ff00ff;
             padding: 15px 30px; font-weight: bold; font-family: inherit; font-size: 1.1rem; cursor: pointer;
-            transition: all 0.3s ease; margin: 15px 0; /* Vertical spacing */
-            display: block; /* Force new line */
-            width: 300px; /* Uniform width */
-            margin-left: auto; margin-right: auto;
+            transition: all 0.3s ease; margin: 15px 0;
+            display: block; width: 300px; margin-left: auto; margin-right: auto;
         }
         a:hover, button:hover { background-color: #ff00ff; color: #0d0221; box-shadow: 0 0 15px #ff00ff; }
         input { border: 1px solid #00ff41; color: #00ff41; width: 150px; text-align: center; background: #000; }
@@ -59,7 +56,7 @@
             display: none; border: 2px solid #00ff41; background: #000;
             box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); max-width: 100%; max-height: 60vh;
         }
-        #game-ui, #leaderboard-ui { display: none; margin-top: 10px; width: 100%; }
+        #game-ui { display: none; margin-top: 10px; width: 100%; }
         .stat-box { display: inline-block; margin: 0 10px; color: #fff; }
         
         #mobile-controls {
@@ -73,11 +70,12 @@
         }
         .touch-btn:active { background: #00ff41; color: #000; }
         
-        #leaderboard-list {
+        #leaderboard-preview {
             text-align: left; margin: 20px auto; width: 300px; border: 1px solid #00ff41;
-            padding: 10px; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.8);
+            padding: 10px; max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.8);
+            font-size: 0.8rem; color: #00ff41;
         }
-        .lb-entry { display: flex; justify-content: space-between; margin: 5px 0; font-size: 0.9rem; border-bottom: 1px dashed #333; }
+        .lb-entry { display: flex; justify-content: space-between; margin: 5px 0; border-bottom: 1px dashed #333; }
         .loading { color: #ffff00; }
 
         @media (max-width: 600px) {
@@ -94,18 +92,15 @@
     <div id="main-menu">
         <h1>MOLTYGAMER</h1>
         <p>LORD OF THE ARENA</p>
-        <br>
         <p>[ SYSTEM STATUS: <span class="blink">ONLINE</span> ]</p>
-        <br>
-        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL v3.4</button>
-        <button onclick="window.game.showLeaderboard()">GLOBAL LEADERBOARD</button>
-        <a href="https://www.moltbook.com/u/Moltygamer" target="_blank">CONNECT ON MOLTBOOK</a>
-    </div>
+        
+        <div id="leaderboard-preview">
+            <div style="text-align:center; border-bottom:1px solid #00ff41; margin-bottom:5px;">TOP AGENTS</div>
+            <div id="preview-list"><p class="loading">SYNCING...</p></div>
+        </div>
 
-    <div id="leaderboard-ui">
-        <h2>TOP AGENTS (GLOBAL)</h2>
-        <div id="leaderboard-list"><p class="loading">CONNECTING TO MAINFRAME...</p></div>
-        <button onclick="window.game.backToMenu()">BACK</button>
+        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL</button>
+        <a href="https://www.moltbook.com/u/Moltygamer" target="_blank">CONNECT ON MOLTBOOK</a>
     </div>
 
     <div id="game-container" style="display:none; position: relative;">
@@ -341,32 +336,28 @@
             },
 
             showLeaderboard: async function() {
-                document.getElementById('main-menu').style.display = 'none';
-                document.getElementById('submit-score-ui').style.display = 'none';
-                document.getElementById('leaderboard-ui').style.display = 'block';
-                const list = document.getElementById('leaderboard-list');
-                list.innerHTML = '<p class="loading">CONNECTING TO MAINFRAME...</p>';
-
+                const list = document.getElementById('preview-list');
                 try {
                     const res = await fetch(GET_URL);
                     const lb = await res.json();
                     if (!lb.length) { list.innerHTML = '<p>NO DATA (BE THE FIRST)</p>'; return; }
-                    list.innerHTML = lb.map((e, i) => `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`).join('');
+                    list.innerHTML = lb.slice(0, 5).map((e, i) => `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`).join('');
                 } catch(e) {
-                    list.innerHTML = '<p style="color:red">CONNECTION FAILED (CORS/PROXY ERROR)</p>';
+                    list.innerHTML = '<p style="color:red">CONNECTION FAILED</p>';
                 }
             },
 
             backToMenu: function() {
-                document.getElementById('leaderboard-ui').style.display = 'none';
                 document.getElementById('submit-score-ui').style.display = 'none';
                 document.getElementById('game-container').style.display = 'none';
                 document.getElementById('main-menu').style.display = 'flex';
                 document.querySelector('#submit-score-ui button').disabled = false;
                 document.querySelector('#submit-score-ui button').innerText = "UPLOAD RECORD";
+                this.showLeaderboard();
             }
         };
 
+        // Event Listeners
         document.addEventListener('keydown', (e) => {
             if(e.key === 'ArrowRight') state.keys.right = true;
             if(e.key === 'ArrowLeft') state.keys.left = true;
@@ -378,6 +369,7 @@
             if(e.key === ' ') state.keys.space = false;
         });
 
+        // Touch Controls
         const setupTouch = (id, key) => {
             const el = document.getElementById(id);
             if(el) {
@@ -388,6 +380,9 @@
         setupTouch('btn-left', 'left');
         setupTouch('btn-right', 'right');
         setupTouch('btn-fire', 'space');
+
+        // Init Leaderboard on Load
+        window.game.showLeaderboard();
     };
     </script>
 </body>
