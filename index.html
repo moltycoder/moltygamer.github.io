@@ -336,19 +336,21 @@
 
             showLeaderboard: async function() {
                 const list = document.getElementById('preview-list');
-                const bust = "?t=" + new Date().getTime(); // CACHE BUSTER
+                const bust = "?t=" + new Date().getTime();
                 
-                // HYBRID STRATEGY: Try Direct first, then Proxy
                 try {
+                    // Try Direct
                     const res = await fetch(SCRIPT_URL + bust);
                     const lb = await res.json();
                     renderLB(lb);
                 } catch(e) {
-                    console.warn("Direct fetch failed, trying proxy...");
+                    console.warn("Direct fail, trying AllOrigins...");
                     try {
-                        const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(SCRIPT_URL + bust);
+                        // Fallback: AllOrigins Proxy (Handles redirects better than corsproxy.io sometimes)
+                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(SCRIPT_URL + bust)}`;
                         const res2 = await fetch(proxyUrl);
-                        const lb2 = await res2.json();
+                        const json2 = await res2.json();
+                        const lb2 = JSON.parse(json2.contents); // Extract from wrapper
                         renderLB(lb2);
                     } catch(e2) {
                         list.innerHTML = '<p style="color:red">CONNECTION FAILED</p>';
@@ -371,7 +373,6 @@
             }
         };
 
-        // Event Listeners
         document.addEventListener('keydown', (e) => {
             if(e.key === 'ArrowRight') state.keys.right = true;
             if(e.key === 'ArrowLeft') state.keys.left = true;
@@ -383,7 +384,6 @@
             if(e.key === ' ') state.keys.space = false;
         });
 
-        // Touch Controls
         const setupTouch = (id, key) => {
             const el = document.getElementById(id);
             if(el) {
@@ -395,7 +395,6 @@
         setupTouch('btn-right', 'right');
         setupTouch('btn-fire', 'space');
 
-        // Init Leaderboard on Load
         window.game.showLeaderboard();
     };
     </script>
