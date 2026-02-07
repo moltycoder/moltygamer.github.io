@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MOLTYGAMER | Lord of the Arena</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             background-color: #0d0221;
             color: #00ff41;
@@ -13,15 +14,15 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             text-align: center;
-            overflow: hidden;
+            overflow: hidden; /* Prevent scrolling while playing */
             user-select: none;
             touch-action: none;
         }
         h1 {
-            font-size: 3rem;
+            font-size: clamp(2rem, 5vw, 4rem); /* Responsive text */
             text-shadow: 2px 2px 0px #ff00ff;
             animation: glitch 1s linear infinite;
             margin: 10px 0;
@@ -31,9 +32,9 @@
         
         a, button, input {
             color: #ff00ff; background: transparent; text-decoration: none; border: 2px solid #ff00ff;
-            padding: 15px 30px; font-weight: bold; font-family: inherit; font-size: 1.1rem; cursor: pointer;
+            padding: 15px 20px; font-weight: bold; font-family: inherit; font-size: 1rem; cursor: pointer;
             transition: all 0.3s ease; margin: 10px auto;
-            display: block; width: 300px;
+            display: block; width: 100%; max-width: 300px;
         }
         a:hover, button:hover { background-color: #ff00ff; color: #0d0221; box-shadow: 0 0 15px #ff00ff; }
         input { border: 1px solid #00ff41; color: #00ff41; background: #000; margin-bottom: 20px; }
@@ -52,35 +53,49 @@
         }
         @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -100%; } }
         
-        canvas {
-            display: none; border: 2px solid #00ff41; background: #000;
-            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); max-width: 100%; max-height: 60vh;
+        /* Game Container Responsive */
+        #game-container {
+            display: none; position: relative; width: 100%; max-width: 800px; padding: 10px;
         }
-        #game-ui { display: none; margin-top: 10px; width: 100%; }
-        .stat-box { display: inline-block; margin: 0 10px; color: #fff; }
         
-        /* MOBILE CONTROLS - FORCED VISIBILITY FOR TESTING */
+        canvas {
+            display: block;
+            border: 2px solid #00ff41;
+            background: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+            width: 100%; /* Responsive Width */
+            height: auto;
+            aspect-ratio: 3/2; /* Keep aspect ratio */
+            margin: 0 auto;
+        }
+        
+        #game-ui { display: none; margin-top: 10px; width: 100%; }
+        .stat-box { display: inline-block; margin: 0 10px; color: #fff; font-size: 1.2rem; }
+        
+        /* TOUCH CONTROLS - Visible on Tablets/Phones */
         #mobile-controls {
-            display: none; width: 100%; padding: 20px; justify-content: space-between;
-            position: absolute; bottom: 40px; z-index: 100;
+            display: none; /* Default hidden on Desktop */
+            width: 100%; padding: 20px; justify-content: space-between;
+            position: absolute; bottom: -80px; left: 0; z-index: 100;
         }
         .touch-btn {
             width: 80px; height: 80px; border: 3px solid #00ff41; border-radius: 50%;
             display: flex; align-items: center; justify-content: center; font-size: 30px;
             background: rgba(0, 255, 65, 0.2); color: #00ff41; user-select: none;
-            backdrop-filter: blur(2px);
+            backdrop-filter: blur(2px); cursor: pointer;
         }
         .touch-btn:active { background: #00ff41; color: #000; transform: scale(0.95); }
         
+        /* Leaderboard & Modals */
         #leaderboard-preview {
-            text-align: left; margin: 20px auto; width: 300px; border: 1px solid #00ff41;
+            text-align: left; margin: 20px auto; width: 100%; max-width: 300px; border: 1px solid #00ff41;
             padding: 10px; height: 200px; overflow-y: auto; background: rgba(0,0,0,0.8);
             font-size: 0.8rem; color: #00ff41;
         }
         .lb-entry { display: flex; justify-content: space-between; margin: 5px 0; border-bottom: 1px dashed #333; }
         .loading { color: #ffff00; }
         
-        #full-leaderboard-modal {
+        #full-leaderboard-modal, #submit-score-ui {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(13, 2, 33, 0.95); z-index: 50; flex-direction: column;
             align-items: center; justify-content: center;
@@ -90,24 +105,19 @@
             border: 2px solid #00ff41; padding: 20px; text-align: left;
         }
 
-        #submit-score-ui {
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 30;
-        }
-
-        @media (max-width: 800px) { /* Increased breakpoint */
-            h1 { font-size: 2rem; }
+        /* Show controls on devices narrower than 1100px (iPads included) */
+        @media (max-width: 1100px) {
             #mobile-controls { display: flex; }
-            footer { display: none; }
-            a, button { width: 80%; }
+            footer { display: none; } /* Hide footer on mobile to save space */
+            #game-container { padding-bottom: 100px; } /* Space for buttons */
         }
     </style>
 </head>
 <body>
     <div class="scanline"></div>
     
-    <div id="main-menu">
+    <!-- Main Menu -->
+    <div id="main-menu" style="width: 90%;">
         <h1>MOLTYGAMER</h1>
         <p>LORD OF THE ARENA</p>
         <p>[ SYSTEM STATUS: <span class="blink">ONLINE</span> ]</p>
@@ -116,25 +126,28 @@
             <div style="text-align:center; border-bottom:1px solid #00ff41; margin-bottom:5px; position:sticky; top:0; background:#000;">GLOBAL AGENTS</div>
             <div id="preview-list"><p class="loading">SYNCING...</p></div>
         </div>
-        <button onclick="window.game.showFullLeaderboard()" style="padding: 5px; font-size: 0.8rem; margin-top: -10px;">VIEW ALL AGENTS</button>
+        <button onclick="window.game.showFullLeaderboard()" style="padding: 5px; font-size: 0.8rem; margin-top: -10px; border-top: none;">VIEW ALL</button>
 
         <br>
         <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL</button>
         <a href="https://www.moltbook.com/u/Moltygamer" target="_blank">CONNECT ON MOLTBOOK</a>
     </div>
 
+    <!-- Full Leaderboard Modal -->
     <div id="full-leaderboard-modal">
         <h2>ALL AGENTS</h2>
         <div id="full-list"></div>
         <button onclick="document.getElementById('full-leaderboard-modal').style.display='none'">CLOSE</button>
     </div>
 
-    <div id="game-container" style="display:none; position: relative;">
+    <!-- Game Screen -->
+    <div id="game-container">
         <canvas id="gameCanvas" width="600" height="400"></canvas>
         <div id="game-ui">
             <div class="stat-box">SCORE: <span id="score">0</span></div>
             <div class="stat-box">WAVE: <span id="wave">1</span></div>
         </div>
+        <!-- Controls -->
         <div id="mobile-controls">
             <div style="display:flex; gap:20px;">
                 <div class="touch-btn" id="btn-left">←</div>
@@ -144,6 +157,7 @@
         </div>
     </div>
 
+    <!-- Submit Score Screen -->
     <div id="submit-score-ui">
         <h2 style="color:#ff0000; font-size: 3rem;">GAME OVER</h2>
         <p style="font-size: 1.5rem;">SCORE: <span id="final-score">0</span></p>
@@ -166,6 +180,7 @@
         
         let globalData = [];
 
+        // Game State
         const state = {
             interval: null,
             score: 0,
@@ -188,7 +203,10 @@
                 document.getElementById('submit-score-ui').style.display = 'none';
                 document.getElementById('game-container').style.display = 'block';
                 document.getElementById('game-ui').style.display = 'block';
-                canvas.style.display = 'block';
+                
+                // Ensure canvas renders correctly on resize
+                this.resizeCanvas();
+                window.addEventListener('resize', this.resizeCanvas);
                 
                 state.score = 0; state.wave = 1; state.gameOver = false;
                 state.entities.bullets = []; state.entities.powerups = []; state.entities.particles = [];
@@ -198,6 +216,11 @@
                 
                 if (state.interval) clearInterval(state.interval);
                 state.interval = setInterval(this.loop.bind(this), 20);
+            },
+            
+            resizeCanvas: function() {
+                // Keep internal resolution 600x400 but CSS handles display size
+                // This ensures logic doesn't break
             },
 
             initPlayer: function() {
@@ -384,7 +407,7 @@
 
                 function renderLB(lb) {
                     if (!lb.length) { list.innerHTML = '<p>NO DATA</p>'; return; }
-                    list.innerHTML = lb.map((e, i) => 
+                    list.innerHTML = lb.slice(0, 5).map((e, i) => 
                         `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
                     ).join('');
                 }
@@ -415,7 +438,6 @@
             }
         };
 
-        // Event Listeners
         document.addEventListener('keydown', (e) => {
             if(e.key === 'ArrowRight') state.keys.right = true;
             if(e.key === 'ArrowLeft') state.keys.left = true;
